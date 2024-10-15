@@ -1,0 +1,26 @@
+import json
+import boto3
+
+firehose_client = boto3.client('firehose')
+
+def lambda_handler(event, context):
+    print("Init")
+    resultString = ""
+    for record in event['Records']:
+        parsedRecord = parseRawRecord(record['dynamodb'])
+        resultString = resultString + json.dumps(parsedRecord) + "\n"
+    print("resultString:" + resultString)
+    response = firehose_client.put_record(
+        DeliveryStreamName="OrdersAuditFireHose",
+        Record={
+            'Data': resultString
+        }
+    )
+    print("Success")
+    
+def parseRawRecord(record):
+    result = {}
+    result["orderId"] = record['NewImage']['orderId']['S']
+    result["state"] = record['NewImage']['state']['S']
+    result["lastUpdatedDate"] = record['NewImage']['lastUpdatedDate']['N']
+    return result
